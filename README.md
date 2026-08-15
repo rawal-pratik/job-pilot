@@ -49,10 +49,18 @@ Every important change to an application is recorded as an event in its timeline
 - Claude / OpenRouter APIs
 
 ## Project Structure
-
 The project will eventually contain:
 ```text
 job-pilot/
 ├── frontend/
 ├── backend/
 └── extension/
+
+## Local Development
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
