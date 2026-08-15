@@ -57,9 +57,7 @@ job-pilot/
 └── extension/
 
 ## Local Development
-
 ### Frontend
-
 ```bash
 cd frontend
 npm install
