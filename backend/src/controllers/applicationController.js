@@ -12,7 +12,9 @@ const VALID_STATUSES = [
 async function createApplication(req, res) {
   try {
     const application =
-      await applicationService.createApplication(req.body);
+      await applicationService.createApplication(
+        req.body
+      );
 
     res.status(201).json(application);
   } catch (error) {
@@ -111,9 +113,37 @@ async function updateApplication(req, res) {
   }
 }
 
+async function checkDuplicateApplication(
+  req,
+  res
+) {
+  try {
+    const duplicate =
+      await applicationService.checkDuplicateApplication(
+        req.query
+      );
+
+    res.json({
+      duplicate: Boolean(duplicate),
+      application: duplicate,
+    });
+  } catch (error) {
+    console.error(
+      "Failed to check duplicate application:",
+      error
+    );
+
+    res.status(500).json({
+      error:
+        "Failed to check duplicate application",
+    });
+  }
+}
+
 module.exports = {
   createApplication,
   getApplications,
   getApplicationById,
   updateApplication,
+  checkDuplicateApplication,
 };

@@ -4,9 +4,29 @@ const applicationController = require("../controllers/applicationController");
 
 const router = express.Router();
 
-router.post("/", applicationController.createApplication);
-router.get("/", applicationController.getApplications);
-router.get("/:id", applicationController.getApplicationById);
-router.patch("/:id", applicationController.updateApplication);
+router.get(
+  "/",
+  applicationController.getApplications
+);
+
+router.get(
+  "/check-duplicate",
+  applicationController.checkDuplicateApplication
+);
+
+router.get(
+  "/:id",
+  applicationController.getApplicationById
+);
+
+router.post(
+  "/",
+  applicationController.createApplication
+);
+
+router.patch(
+  "/:id",
+  applicationController.updateApplication
+);
 
 module.exports = router;

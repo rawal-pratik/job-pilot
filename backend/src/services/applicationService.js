@@ -257,6 +257,88 @@ async function getApplicationById(id) {
   };
 }
 
+async function checkDuplicateApplication({
+  platform,
+  externalJobId,
+  companyName,
+  title,
+  url,
+}) {
+  if (externalJobId) {
+    const result = await pool.query(
+      `
+        SELECT
+          applications.id AS application_id,
+          applications.status,
+          applications.applied_at,
+          jobs.id AS job_id,
+          jobs.title AS job_title,
+          jobs.external_job_id,
+          jobs.platform,
+          jobs.url AS job_url,
+          companies.name AS company_name
+        FROM applications
+        JOIN jobs
+          ON applications.job_id = jobs.id
+        JOIN companies
+          ON jobs.company_id = companies.id
+        WHERE LOWER(jobs.platform) = LOWER($1)
+          AND jobs.external_job_id = $2
+        LIMIT 1;
+      `,
+      [platform, externalJobId]
+    );
+
+    if (result.rowCount > 0) {
+      return result.rows[0];
+    }
+  }
+
+  if (
+    companyName &&
+    title &&
+    platform &&
+    url
+  ) {
+    const result = await pool.query(
+      `
+        SELECT
+          applications.id AS application_id,
+          applications.status,
+          applications.applied_at,
+          jobs.id AS job_id,
+          jobs.title AS job_title,
+          jobs.external_job_id,
+          jobs.platform,
+          jobs.url AS job_url,
+          companies.name AS company_name
+        FROM applications
+        JOIN jobs
+          ON applications.job_id = jobs.id
+        JOIN companies
+          ON jobs.company_id = companies.id
+        WHERE LOWER(companies.name) = LOWER($1)
+          AND LOWER(jobs.title) = LOWER($2)
+          AND LOWER(jobs.platform) = LOWER($3)
+          AND jobs.url = $4
+        LIMIT 1;
+      `,
+      [
+        companyName,
+        title,
+        platform,
+        url,
+      ]
+    );
+
+    if (result.rowCount > 0) {
+      return result.rows[0];
+    }
+  }
+
+  return null;
+}
+
 async function updateApplication(id, applicationData) {
   const { status, notes } = applicationData;
 
@@ -279,7 +361,8 @@ async function updateApplication(id, applicationData) {
       return null;
     }
 
-    const existingApplication = existingResult.rows[0];
+    const existingApplication =
+      existingResult.rows[0];
 
     const updatedStatus =
       status ?? existingApplication.status;
@@ -346,4 +429,5 @@ module.exports = {
   getApplications,
   getApplicationById,
   updateApplication,
+  checkDuplicateApplication,
 };
