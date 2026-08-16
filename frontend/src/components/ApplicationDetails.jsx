@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
 
-import { getApplicationById } from "../api/applications";
+import {
+  getApplicationById,
+  updateApplication,
+} from "../api/applications";
+
+import StatusSelector from "./StatusSelector";
 
 function ApplicationDetails({ applicationId, onBack }) {
   const [application, setApplication] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -26,6 +32,30 @@ function ApplicationDetails({ applicationId, onBack }) {
     loadApplication();
   }, [applicationId]);
 
+  async function handleStatusChange(newStatus) {
+    if (newStatus === application.status) {
+      return;
+    }
+
+    try {
+      setUpdatingStatus(true);
+      setError(null);
+
+      await updateApplication(applicationId, {
+        status: newStatus,
+      });
+
+      const updatedApplication =
+        await getApplicationById(applicationId);
+
+      setApplication(updatedApplication);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="application-details">
@@ -35,7 +65,7 @@ function ApplicationDetails({ applicationId, onBack }) {
     );
   }
 
-  if (error) {
+  if (error && !application) {
     return (
       <div className="application-details">
         <button onClick={onBack}>← Back</button>
@@ -46,7 +76,15 @@ function ApplicationDetails({ applicationId, onBack }) {
 
   return (
     <div className="application-details">
-      <button onClick={onBack}>← Back to Applications</button>
+      <button onClick={onBack}>
+        ← Back to Applications
+      </button>
+
+      {error && (
+        <div className="form-error">
+          {error}
+        </div>
+      )}
 
       <header className="details-header">
         <div>
@@ -54,11 +92,13 @@ function ApplicationDetails({ applicationId, onBack }) {
           <p>{application.company_name}</p>
         </div>
 
-        <span
-          className={`status status-${application.status.toLowerCase()}`}
-        >
-          {application.status}
-        </span>
+        <div className="status-control">
+          <StatusSelector
+            status={application.status}
+            onStatusChange={handleStatusChange}
+            disabled={updatingStatus}
+          />
+        </div>
       </header>
 
       <section className="details-section">
@@ -77,20 +117,24 @@ function ApplicationDetails({ applicationId, onBack }) {
 
           <div>
             <strong>Location</strong>
-            <p>{application.location || "Not specified"}</p>
+            <p>
+              {application.location || "Not specified"}
+            </p>
           </div>
 
           <div>
             <strong>Employment Type</strong>
             <p>
-              {application.employment_type || "Not specified"}
+              {application.employment_type ||
+                "Not specified"}
             </p>
           </div>
 
           <div>
             <strong>Job ID</strong>
             <p>
-              {application.external_job_id || "Not specified"}
+              {application.external_job_id ||
+                "Not specified"}
             </p>
           </div>
 
@@ -153,6 +197,7 @@ function ApplicationDetails({ applicationId, onBack }) {
               >
                 <div>
                   <strong>{event.event_type}</strong>
+
                   <p>
                     Source: {event.source}
                   </p>

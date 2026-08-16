@@ -366,3 +366,34 @@ button:disabled {
     white-space: normal;
   }
 }
+
+/* Status Control */
+
+.status-control select {
+  padding: 8px 12px;
+
+  border: 1px solid #d2d2d7;
+  border-radius: 6px;
+
+  background: #ffffff;
+  color: #1d1d1f;
+
+  font: inherit;
+  font-size: 14px;
+
+  cursor: pointer;
+
+  outline: none;
+}
+
+.status-control select:focus {
+  border-color: #0071e3;
+
+  box-shadow:
+    0 0 0 3px rgba(0, 113, 227, 0.12);
+}
+
+.status-control select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

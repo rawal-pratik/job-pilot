@@ -46,3 +46,26 @@ export async function createApplication(applicationData) {
 
   return response.json();
 }
+
+export async function updateApplication(id, applicationData) {
+  const response = await fetch(
+    `${API_URL}/api/applications/${id}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(applicationData),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+
+    throw new Error(
+      error.error || "Failed to update application"
+    );
+  }
+
+  return response.json();
+}

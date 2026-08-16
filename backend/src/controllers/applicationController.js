@@ -1,14 +1,25 @@
 const applicationService = require("../services/applicationService");
 
+const VALID_STATUSES = [
+  "APPLIED",
+  "INTERVIEW",
+  "OFFER",
+  "REJECTED",
+  "WITHDRAWN",
+  "NO_RESPONSE",
+];
+
 async function createApplication(req, res) {
   try {
-    const application = await applicationService.createApplication(
-      req.body
-    );
+    const application =
+      await applicationService.createApplication(req.body);
 
     res.status(201).json(application);
   } catch (error) {
-    console.error("Failed to create application:", error);
+    console.error(
+      "Failed to create application:",
+      error
+    );
 
     res.status(500).json({
       error: "Failed to create application",
@@ -18,11 +29,15 @@ async function createApplication(req, res) {
 
 async function getApplications(req, res) {
   try {
-    const applications = await applicationService.getApplications();
+    const applications =
+      await applicationService.getApplications();
 
     res.json(applications);
   } catch (error) {
-    console.error("Failed to fetch applications:", error);
+    console.error(
+      "Failed to fetch applications:",
+      error
+    );
 
     res.status(500).json({
       error: "Failed to fetch applications",
@@ -32,9 +47,10 @@ async function getApplications(req, res) {
 
 async function getApplicationById(req, res) {
   try {
-    const application = await applicationService.getApplicationById(
-      req.params.id
-    );
+    const application =
+      await applicationService.getApplicationById(
+        req.params.id
+      );
 
     if (!application) {
       return res.status(404).json({
@@ -44,7 +60,10 @@ async function getApplicationById(req, res) {
 
     res.json(application);
   } catch (error) {
-    console.error("Failed to fetch application:", error);
+    console.error(
+      "Failed to fetch application:",
+      error
+    );
 
     res.status(500).json({
       error: "Failed to fetch application",
@@ -54,10 +73,24 @@ async function getApplicationById(req, res) {
 
 async function updateApplication(req, res) {
   try {
-    const application = await applicationService.updateApplication(
-      req.params.id,
-      req.body
-    );
+    const { status } = req.body;
+
+    if (
+      status &&
+      !VALID_STATUSES.includes(status)
+    ) {
+      return res.status(400).json({
+        error: `Invalid application status. Valid statuses are: ${VALID_STATUSES.join(
+          ", "
+        )}`,
+      });
+    }
+
+    const application =
+      await applicationService.updateApplication(
+        req.params.id,
+        req.body
+      );
 
     if (!application) {
       return res.status(404).json({
@@ -67,7 +100,10 @@ async function updateApplication(req, res) {
 
     res.json(application);
   } catch (error) {
-    console.error("Failed to update application:", error);
+    console.error(
+      "Failed to update application:",
+      error
+    );
 
     res.status(500).json({
       error: "Failed to update application",

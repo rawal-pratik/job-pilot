@@ -43,8 +43,9 @@ function App() {
     setSelectedApplicationId(applicationId);
   }
 
-  function handleBackToApplications() {
+  async function handleBackToApplications() {
     setSelectedApplicationId(null);
+    await loadApplications();
   }
 
   if (selectedApplicationId !== null) {
