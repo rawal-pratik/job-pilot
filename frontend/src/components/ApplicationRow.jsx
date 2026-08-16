@@ -1,6 +1,9 @@
-function ApplicationRow({ application }) {
+function ApplicationRow({ application, onClick }) {
   return (
-    <div className="application-row">
+    <div
+      className="application-row application-row-clickable"
+      onClick={() => onClick(application.id)}
+    >
       <div>
         <strong>{application.company_name}</strong>
       </div>
@@ -10,7 +13,9 @@ function ApplicationRow({ application }) {
       <div>{application.platform}</div>
 
       <div>
-        <span className={`status status-${application.status.toLowerCase()}`}>
+        <span
+          className={`status status-${application.status.toLowerCase()}`}
+        >
           {application.status}
         </span>
       </div>

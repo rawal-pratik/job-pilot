@@ -1,6 +1,6 @@
 import ApplicationRow from "./ApplicationRow";
 
-function ApplicationList({ applications }) {
+function ApplicationList({ applications, onApplicationClick }) {
   if (applications.length === 0) {
     return (
       <div>
@@ -23,6 +23,7 @@ function ApplicationList({ applications }) {
         <ApplicationRow
           key={application.id}
           application={application}
+          onClick={onApplicationClick}
         />
       ))}
     </div>

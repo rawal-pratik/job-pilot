@@ -11,6 +11,22 @@ export async function getApplications() {
   return response.json();
 }
 
+export async function getApplicationById(id) {
+  const response = await fetch(
+    `${API_URL}/api/applications/${id}`
+  );
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error("Application not found");
+    }
+
+    throw new Error("Failed to fetch application");
+  }
+
+  return response.json();
+}
+
 export async function createApplication(applicationData) {
   const response = await fetch(`${API_URL}/api/applications`, {
     method: "POST",
@@ -23,7 +39,9 @@ export async function createApplication(applicationData) {
   if (!response.ok) {
     const error = await response.json();
 
-    throw new Error(error.error || "Failed to create application");
+    throw new Error(
+      error.error || "Failed to create application"
+    );
   }
 
   return response.json();
