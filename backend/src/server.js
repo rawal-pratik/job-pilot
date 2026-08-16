@@ -6,7 +6,10 @@ dotenv.config({
 });
 
 const express = require("express");
+
 const pool = require("./db");
+const jobRoutes = require("./routes/jobRoutes");
+const applicationRoutes = require("./routes/applicationRoutes");
 
 const app = express();
 
@@ -37,6 +40,9 @@ app.get("/api/health/db", async (req, res) => {
     });
   }
 });
+
+app.use("/api/jobs", jobRoutes);
+app.use("/api/applications", applicationRoutes);
 
 app.listen(PORT, () => {
   console.log(`Job Pilot backend running on port ${PORT}`);
