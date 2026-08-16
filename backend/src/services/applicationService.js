@@ -201,9 +201,194 @@ async function updateApplication(id, applicationData) {
   }
 }
 
+async function createApplication(applicationData) {
+  const {
+    companyName,
+    companyWebsiteUrl,
+    title,
+    externalJobId,
+    platform,
+    url,
+    location,
+    employmentType,
+    salaryMin,
+    salaryMax,
+    salaryCurrency,
+    description,
+    postedAt,
+    status = "APPLIED",
+    appliedAt,
+    notes,
+  } = applicationData;
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    let companyResult = await client.query(
+      `
+        SELECT id
+        FROM companies
+        WHERE LOWER(name) = LOWER($1)
+        LIMIT 1;
+      `,
+      [companyName]
+    );
+
+    let companyId;
+
+    if (companyResult.rowCount > 0) {
+      companyId = companyResult.rows[0].id;
+    } else {
+      const newCompanyResult = await client.query(
+        `
+          INSERT INTO companies (
+            name,
+            website_url
+          )
+          VALUES ($1, $2)
+          RETURNING id;
+        `,
+        [companyName, companyWebsiteUrl || null]
+      );
+
+      companyId = newCompanyResult.rows[0].id;
+    }
+
+    let jobResult;
+
+    if (externalJobId) {
+      jobResult = await client.query(
+        `
+          SELECT id
+          FROM jobs
+          WHERE platform = $1
+            AND external_job_id = $2;
+        `,
+        [platform, externalJobId]
+      );
+    } else {
+      jobResult = await client.query(
+        `
+          SELECT id
+          FROM jobs
+          WHERE company_id = $1
+            AND LOWER(title) = LOWER($2)
+            AND platform = $3
+            AND url = $4;
+        `,
+        [companyId, title, platform, url]
+      );
+    }
+
+    let jobId;
+
+    if (jobResult.rowCount > 0) {
+      jobId = jobResult.rows[0].id;
+    } else {
+      const newJobResult = await client.query(
+        `
+          INSERT INTO jobs (
+            company_id,
+            title,
+            external_job_id,
+            platform,
+            url,
+            location,
+            employment_type,
+            salary_min,
+            salary_max,
+            salary_currency,
+            description,
+            posted_at
+          )
+          VALUES (
+            $1, $2, $3, $4, $5, $6, $7,
+            $8, $9, $10, $11, $12
+          )
+          RETURNING id;
+        `,
+        [
+          companyId,
+          title,
+          externalJobId || null,
+          platform,
+          url,
+          location || null,
+          employmentType || null,
+          salaryMin || null,
+          salaryMax || null,
+          salaryCurrency || null,
+          description || null,
+          postedAt || null,
+        ]
+      );
+
+      jobId = newJobResult.rows[0].id;
+    }
+
+    const applicationResult = await client.query(
+      `
+        INSERT INTO applications (
+          job_id,
+          status,
+          applied_at,
+          notes
+        )
+        VALUES (
+          $1,
+          $2,
+          COALESCE($3, CURRENT_TIMESTAMP),
+          $4
+        )
+        RETURNING *;
+      `,
+      [
+        jobId,
+        status,
+        appliedAt || null,
+        notes || null,
+      ]
+    );
+
+    const application = applicationResult.rows[0];
+
+    await client.query(
+      `
+        INSERT INTO application_events (
+          application_id,
+          event_type,
+          source,
+          metadata
+        )
+        VALUES ($1, $2, $3, $4);
+      `,
+      [
+        application.id,
+        "APPLICATION_CREATED",
+        "MANUAL",
+        JSON.stringify({
+          status,
+        }),
+      ]
+    );
+
+    await client.query("COMMIT");
+
+    return application;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   createApplication,
   getApplications,
   getApplicationById,
   updateApplication,
+  createApplication
 };

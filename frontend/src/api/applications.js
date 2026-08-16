@@ -10,3 +10,21 @@ export async function getApplications() {
 
   return response.json();
 }
+
+export async function createApplication(applicationData) {
+  const response = await fetch(`${API_URL}/api/applications`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(applicationData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+
+    throw new Error(error.error || "Failed to create application");
+  }
+
+  return response.json();
+}
