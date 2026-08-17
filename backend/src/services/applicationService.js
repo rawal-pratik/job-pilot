@@ -60,33 +60,58 @@ async function createApplication(applicationData) {
     if (externalJobId) {
       jobResult = await client.query(
         `
-          SELECT id
-          FROM jobs
-          WHERE platform = $1
-            AND external_job_id = $2;
+          INSERT INTO jobs (
+            company_id,
+            title,
+            external_job_id,
+            platform,
+            url,
+            location,
+            employment_type,
+            salary_min,
+            salary_max,
+            salary_currency,
+            description,
+            posted_at
+          )
+          VALUES (
+            $1, $2, $3, $4, $5, $6, $7,
+            $8, $9, $10, $11, $12
+          )
+          ON CONFLICT (
+            LOWER(platform),
+            external_job_id
+          )
+          WHERE external_job_id IS NOT NULL
+          DO UPDATE SET
+            title = EXCLUDED.title,
+            url = EXCLUDED.url,
+            location = EXCLUDED.location,
+            employment_type = EXCLUDED.employment_type,
+            salary_min = EXCLUDED.salary_min,
+            salary_max = EXCLUDED.salary_max,
+            salary_currency = EXCLUDED.salary_currency,
+            description = EXCLUDED.description,
+            posted_at = EXCLUDED.posted_at
+          RETURNING id;
         `,
-        [platform, externalJobId]
+        [
+          companyId,
+          title,
+          externalJobId,
+          platform,
+          url,
+          location || null,
+          employmentType || null,
+          salaryMin || null,
+          salaryMax || null,
+          salaryCurrency || null,
+          description || null,
+          postedAt || null,
+        ]
       );
     } else {
       jobResult = await client.query(
-        `
-          SELECT id
-          FROM jobs
-          WHERE company_id = $1
-            AND LOWER(title) = LOWER($2)
-            AND platform = $3
-            AND url = $4;
-        `,
-        [companyId, title, platform, url]
-      );
-    }
-
-    let jobId;
-
-    if (jobResult.rowCount > 0) {
-      jobId = jobResult.rows[0].id;
-    } else {
-      const newJobResult = await client.query(
         `
           INSERT INTO jobs (
             company_id,
@@ -106,12 +131,29 @@ async function createApplication(applicationData) {
             $1, $2, $3, $4, $5, $6, $7,
             $8, $9, $10, $11, $12
           )
+          ON CONFLICT (
+            company_id,
+            LOWER(title),
+            LOWER(platform),
+            url
+          )
+          WHERE external_job_id IS NULL
+          DO UPDATE SET
+            title = EXCLUDED.title,
+            url = EXCLUDED.url,
+            location = EXCLUDED.location,
+            employment_type = EXCLUDED.employment_type,
+            salary_min = EXCLUDED.salary_min,
+            salary_max = EXCLUDED.salary_max,
+            salary_currency = EXCLUDED.salary_currency,
+            description = EXCLUDED.description,
+            posted_at = EXCLUDED.posted_at
           RETURNING id;
         `,
         [
           companyId,
           title,
-          externalJobId || null,
+          null,
           platform,
           url,
           location || null,
@@ -123,9 +165,9 @@ async function createApplication(applicationData) {
           postedAt || null,
         ]
       );
-
-      jobId = newJobResult.rows[0].id;
     }
+
+    const jobId = jobResult.rows[0].id;
 
     const applicationResult = await client.query(
       `
@@ -424,10 +466,30 @@ async function updateApplication(id, applicationData) {
   }
 }
 
+async function findApplicationByJobId(jobId) {
+  const result = await pool.query(
+    `
+      SELECT *
+      FROM applications
+      WHERE job_id = $1
+      ORDER BY applied_at DESC
+      LIMIT 1;
+    `,
+    [jobId]
+  );
+
+  if (result.rowCount === 0) {
+    return null;
+  }
+
+  return result.rows[0];
+}
+
 module.exports = {
   createApplication,
   getApplications,
   getApplicationById,
   updateApplication,
   checkDuplicateApplication,
+  findApplicationByJobId
 };
