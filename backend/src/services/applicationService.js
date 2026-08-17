@@ -49,7 +49,10 @@ async function createApplication(applicationData) {
           VALUES ($1, $2)
           RETURNING id;
         `,
-        [companyName, companyWebsiteUrl || null]
+        [
+          companyName,
+          companyWebsiteUrl || null,
+        ]
       );
 
       companyId = newCompanyResult.rows[0].id;
@@ -84,6 +87,7 @@ async function createApplication(applicationData) {
           )
           WHERE external_job_id IS NOT NULL
           DO UPDATE SET
+            company_id = EXCLUDED.company_id,
             title = EXCLUDED.title,
             url = EXCLUDED.url,
             location = EXCLUDED.location,
@@ -92,7 +96,8 @@ async function createApplication(applicationData) {
             salary_max = EXCLUDED.salary_max,
             salary_currency = EXCLUDED.salary_currency,
             description = EXCLUDED.description,
-            posted_at = EXCLUDED.posted_at
+            posted_at = EXCLUDED.posted_at,
+            updated_at = CURRENT_TIMESTAMP
           RETURNING id;
         `,
         [
@@ -139,6 +144,7 @@ async function createApplication(applicationData) {
           )
           WHERE external_job_id IS NULL
           DO UPDATE SET
+            company_id = EXCLUDED.company_id,
             title = EXCLUDED.title,
             url = EXCLUDED.url,
             location = EXCLUDED.location,
@@ -147,7 +153,8 @@ async function createApplication(applicationData) {
             salary_max = EXCLUDED.salary_max,
             salary_currency = EXCLUDED.salary_currency,
             description = EXCLUDED.description,
-            posted_at = EXCLUDED.posted_at
+            posted_at = EXCLUDED.posted_at,
+            updated_at = CURRENT_TIMESTAMP
           RETURNING id;
         `,
         [
@@ -193,7 +200,8 @@ async function createApplication(applicationData) {
       ]
     );
 
-    const application = applicationResult.rows[0];
+    const application =
+      applicationResult.rows[0];
 
     await client.query(
       `
