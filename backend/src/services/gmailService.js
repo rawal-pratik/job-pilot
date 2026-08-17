@@ -5,7 +5,7 @@ const {
   GOOGLE_SCOPES,
 } = require("../config/google");
 
-function getAuthorizationUrl() {
+function getAuthorizationUrl(state) {
   const oauth2Client = createOAuthClient();
 
   return oauth2Client.generateAuthUrl({
@@ -13,6 +13,7 @@ function getAuthorizationUrl() {
     scope: GOOGLE_SCOPES,
     include_granted_scopes: true,
     prompt: "consent",
+    state,
   });
 }
 
@@ -71,10 +72,30 @@ async function getMessage(tokens, messageId) {
   return response.data;
 }
 
+async function getGoogleAccountInfo(tokens) {
+  const auth =
+    createAuthenticatedClient(tokens);
+
+  const gmail = google.gmail({
+    version: "v1",
+    auth,
+  });
+
+  const response =
+    await gmail.users.getProfile({
+      userId: "me",
+    });
+
+  return {
+    email: response.data.emailAddress,
+  };
+}
+
 module.exports = {
   getAuthorizationUrl,
   exchangeCodeForTokens,
   createAuthenticatedClient,
   listMessages,
   getMessage,
+  getGoogleAccountInfo,
 };

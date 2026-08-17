@@ -1,11 +1,28 @@
 const gmailService = require("../services/gmailService");
-
-let gmailTokens = null;
+const gmailConnectionService = require("../services/gmailConnectionService");
+const userService = require("../services/userService");
 
 async function authorizeGmail(req, res) {
   try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({
+        error: "userId is required",
+      });
+    }
+
+    const user =
+      await userService.getUserById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        error: "User not found",
+      });
+    }
+
     const authorizationUrl =
-      gmailService.getAuthorizationUrl();
+      gmailService.getAuthorizationUrl(userId);
 
     res.redirect(authorizationUrl);
   } catch (error) {
@@ -23,11 +40,34 @@ async function authorizeGmail(req, res) {
 
 async function gmailCallback(req, res) {
   try {
-    const { code } = req.query;
+    const { code, state } = req.query;
 
     if (!code) {
       return res.status(400).json({
         error: "Authorization code is missing",
+      });
+    }
+
+    if (!state) {
+      return res.status(400).json({
+        error: "User state is missing",
+      });
+    }
+
+    const userId = Number(state);
+
+    if (!Number.isInteger(userId)) {
+      return res.status(400).json({
+        error: "Invalid user state",
+      });
+    }
+
+    const user =
+      await userService.getUserById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        error: "User not found",
       });
     }
 
@@ -36,11 +76,35 @@ async function gmailCallback(req, res) {
         code
       );
 
-    gmailTokens = tokens;
+    const googleAccount =
+      await gmailService.getGoogleAccountInfo(
+        tokens
+      );
+
+    const connection =
+      await gmailConnectionService
+        .createOrUpdateConnection({
+          userId,
+          googleAccountEmail:
+            googleAccount.email,
+          accessToken:
+            tokens.access_token,
+          refreshToken:
+            tokens.refresh_token,
+          tokenExpiry: tokens.expiry_date
+            ? new Date(tokens.expiry_date)
+            : null,
+        });
 
     res.json({
       message:
         "Gmail account connected successfully.",
+      connection: {
+        id: connection.id,
+        userId: connection.user_id,
+        googleAccountEmail:
+          connection.google_account_email,
+      },
     });
   } catch (error) {
     console.error(
@@ -49,22 +113,47 @@ async function gmailCallback(req, res) {
     );
 
     res.status(500).json({
-      error: "Gmail authorization failed",
+      error:
+        "Gmail authorization failed",
     });
   }
 }
 
 async function getMessages(req, res) {
   try {
-    if (!gmailTokens) {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({
+        error: "userId is required",
+      });
+    }
+
+    const connection =
+      await gmailConnectionService
+        .getConnectionByUserId(userId);
+
+    if (!connection) {
       return res.status(401).json({
-        error: "Gmail account is not connected",
+        error:
+          "Gmail account is not connected",
       });
     }
 
     const messages =
       await gmailService.listMessages(
-        gmailTokens,
+        {
+          access_token:
+            connection.access_token,
+          refresh_token:
+            connection.refresh_token,
+          expiry_date:
+            connection.token_expiry
+              ? new Date(
+                  connection.token_expiry
+                ).getTime()
+              : null,
+        },
         {
           maxResults:
             Number(req.query.maxResults) || 20,
@@ -88,28 +177,53 @@ async function getMessages(req, res) {
 
 async function getMessage(req, res) {
   try {
-    if (!gmailTokens) {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({
+        error: "userId is required",
+      });
+    }
+
+    const connection =
+      await gmailConnectionService
+        .getConnectionByUserId(userId);
+
+    if (!connection) {
       return res.status(401).json({
-        error: "Gmail account is not connected",
+        error:
+          "Gmail account is not connected",
       });
     }
 
     const message =
       await gmailService.getMessage(
-        gmailTokens,
+        {
+          access_token:
+            connection.access_token,
+          refresh_token:
+            connection.refresh_token,
+          expiry_date:
+            connection.token_expiry
+              ? new Date(
+                  connection.token_expiry
+                ).getTime()
+              : null,
+        },
         req.params.messageId
       );
 
     res.json(message);
   } catch (error) {
     console.error(
-      "Failed to retrieve Gmail message:",
-      error
+      "Gmail authorization failed:",
+      error.response?.data || error
     );
-
     res.status(500).json({
-      error:
-        "Failed to retrieve Gmail message",
+      error: "Gmail authorization failed",
+      details:
+        error.response?.data ||
+        error.message,
     });
   }
 }
