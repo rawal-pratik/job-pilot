@@ -15,6 +15,11 @@ router.get(
 );
 
 router.get(
+  "/job/:jobId",
+  applicationController.getApplicationByJobId
+);
+
+router.get(
   "/:id",
   applicationController.getApplicationById
 );

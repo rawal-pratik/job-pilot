@@ -176,6 +176,32 @@ async function createApplication(applicationData) {
 
     const jobId = jobResult.rows[0].id;
 
+    const existingApplicationResult =
+      await client.query(
+        `
+          SELECT *
+          FROM applications
+          WHERE job_id = $1
+          ORDER BY applied_at DESC
+          LIMIT 1;
+        `,
+        [jobId]
+      );
+
+    if (existingApplicationResult.rowCount > 0) {
+      await client.query("ROLLBACK");
+
+      const error = new Error(
+        "An application already exists for this job."
+      );
+
+      error.code = "APPLICATION_ALREADY_EXISTS";
+      error.application =
+        existingApplicationResult.rows[0];
+
+      throw error;
+    }
+
     const applicationResult = await client.query(
       `
         INSERT INTO applications (
@@ -199,7 +225,7 @@ async function createApplication(applicationData) {
         notes || null,
       ]
     );
-
+    
     const application =
       applicationResult.rows[0];
 
@@ -477,10 +503,20 @@ async function updateApplication(id, applicationData) {
 async function findApplicationByJobId(jobId) {
   const result = await pool.query(
     `
-      SELECT *
+      SELECT
+        applications.*,
+        jobs.title AS job_title,
+        jobs.external_job_id,
+        jobs.platform,
+        jobs.url AS job_url,
+        companies.name AS company_name
       FROM applications
-      WHERE job_id = $1
-      ORDER BY applied_at DESC
+      JOIN jobs
+        ON applications.job_id = jobs.id
+      JOIN companies
+        ON jobs.company_id = companies.id
+      WHERE applications.job_id = $1
+      ORDER BY applications.applied_at DESC
       LIMIT 1;
     `,
     [jobId]

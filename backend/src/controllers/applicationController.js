@@ -18,6 +18,17 @@ async function createApplication(req, res) {
 
     res.status(201).json(application);
   } catch (error) {
+    if (
+      error.code ===
+      "APPLICATION_ALREADY_EXISTS"
+    ) {
+      return res.status(409).json({
+        error:
+          "An application already exists for this job.",
+        application: error.application,
+      });
+    }
+
     console.error(
       "Failed to create application:",
       error
@@ -140,10 +151,39 @@ async function checkDuplicateApplication(
   }
 }
 
+async function getApplicationByJobId(req, res) {
+  try {
+    const application =
+      await applicationService.findApplicationByJobId(
+        req.params.jobId
+      );
+
+    if (!application) {
+      return res.status(404).json({
+        error:
+          "No application found for this job.",
+      });
+    }
+
+    res.json(application);
+  } catch (error) {
+    console.error(
+      "Failed to fetch application by job:",
+      error
+    );
+
+    res.status(500).json({
+      error:
+        "Failed to fetch application by job",
+    });
+  }
+}
+
 module.exports = {
   createApplication,
   getApplications,
   getApplicationById,
   updateApplication,
   checkDuplicateApplication,
+  getApplicationByJobId
 };
