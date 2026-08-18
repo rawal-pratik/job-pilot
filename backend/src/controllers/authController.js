@@ -1,4 +1,8 @@
-const authService = require("../services/authService");
+const authService =
+  require("../services/authService");
+
+const sessionService =
+  require("../services/sessionService");
 
 async function login(req, res) {
   try {
@@ -35,6 +39,26 @@ async function callback(req, res) {
         code
       );
 
+    const session =
+      await sessionService.createSession(
+        user.id
+      );
+
+    res.cookie(
+      "job_pilot_session",
+      session.id,
+      {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite:
+          process.env.NODE_ENV === "production"
+            ? "none"
+            : "lax",
+        maxAge:
+          7 * 24 * 60 * 60 * 1000,
+      }
+    );
+
     res.json({
       message: "Login successful",
       user: {
@@ -46,19 +70,54 @@ async function callback(req, res) {
   } catch (error) {
     console.error(
       "Authentication failed:",
-      error.response?.data || error
+      error
     );
 
     res.status(500).json({
       error: "Authentication failed",
-      details:
-        error.response?.data ||
-        error.message,
     });
   }
+}
+
+async function logout(req, res) {
+  try {
+    const sessionId =
+      req.cookies.job_pilot_session;
+
+    if (sessionId) {
+      await sessionService.deleteSession(
+        sessionId
+      );
+    }
+
+    res.clearCookie(
+      "job_pilot_session"
+    );
+
+    res.json({
+      message: "Logout successful",
+    });
+  } catch (error) {
+    console.error(
+      "Logout failed:",
+      error
+    );
+
+    res.status(500).json({
+      error: "Logout failed",
+    });
+  }
+}
+
+async function getCurrentUser(req, res) {
+  res.json({
+    user: req.user,
+  });
 }
 
 module.exports = {
   login,
   callback,
+  logout,
+  getCurrentUser
 };
